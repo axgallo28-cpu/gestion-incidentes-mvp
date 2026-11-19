@@ -17,6 +17,7 @@
       <div class="collapse navbar-collapse" id="navegacion"><div class="navbar-nav ms-auto gap-2 align-items-lg-center">
         <span class="badge rounded-pill border border-info text-info p-2">{{ usuario or 'Usuario' }} · {{ rol or '' }}</span>
         <a class="btn btn-sm btn-outline-info" href="{{ url_for('dashboard') }}">Tablero y mapa</a>
+        <a class="btn btn-sm btn-outline-info" href="{{ url_for('amenazas_universitarias') }}">🛡️ Amenazas universitarias</a>
         <a class="btn btn-sm btn-cyber" href="{{ url_for('registrar') }}">+ Nuevo incidente</a>
         <form method="POST" action="{{ url_for('logout') }}" class="m-0"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-light" type="submit">Cerrar sesión</button></form>
       </div></div>

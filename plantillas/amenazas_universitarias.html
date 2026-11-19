@@ -1,269 +1,52 @@
-
-{% extends "base.html" %}
-
-{% block title %}
-Monitor de Ciberamenazas Universitarias
-{% endblock %}
-
-{% block content %}
-
+{% extends 'base.html' %}
+{% block title %}Monitor universitario | Ciberseguridad{% endblock %}
+{% block extra_css %}
 <style>
-.monitor-unad {
-    color: #eaf6ff;
-}
-
-.monitor-hero {
-    background: linear-gradient(120deg, #061525, #123b59);
-    border: 1px solid #176585;
-    border-radius: 16px;
-    padding: 28px;
-    margin-bottom: 22px;
-}
-
-.monitor-hero h1 {
-    color: #ffffff;
-    font-size: 28px;
-    font-weight: 750;
-}
-
-.monitor-hero p {
-    color: #b9d9e9;
-}
-
-.monitor-badge {
-    display: inline-block;
-    background: #164e63;
-    color: #a5f3fc;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    margin-top: 8px;
-}
-
-.monitor-panel {
-    background: #081d31;
-    border: 1px solid #22516e;
-    border-radius: 16px;
-    padding: 22px;
-    margin-bottom: 20px;
-}
-
-.monitor-panel h2 {
-    color: #ffffff;
-    font-size: 21px;
-}
-
-.monitor-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-    margin-top: 20px;
-}
-
-.monitor-news {
-    background: #102d47;
-    border: 1px solid #275875;
-    border-radius: 12px;
-    padding: 18px;
-}
-
-.monitor-news h3 {
-    color: #ffffff;
-    font-size: 17px;
-    line-height: 1.5;
-}
-
-.monitor-news p {
-    color: #b5ccdc;
-    font-size: 13px;
-}
-
-.monitor-news a,
-.monitor-panel a {
-    color: #67e8f9;
-}
-
-.monitor-news a {
-    overflow-wrap: anywhere;
-}
-
-.monitor-note {
-    background: #12374b;
-    border-left: 4px solid #22d3ee;
-    padding: 14px;
-    margin-top: 14px;
-    border-radius: 8px;
-    color: #d9f0fb;
-}
-
-.monitor-btn {
-    background: #0891b2;
-    color: #ffffff;
-    padding: 10px 18px;
-    border: 0;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-@media (max-width: 768px) {
-    .monitor-grid {
-        grid-template-columns: 1fr;
-    }
-}
+.unad-hero{background:linear-gradient(100deg,rgba(3,14,30,.84),rgba(8,40,65,.90)),url("{{ url_for('static',filename='images/cyber-escudo.svg') }}") right center/auto 95% no-repeat;border:1px solid rgba(34,211,238,.3);border-radius:20px;padding:2rem}
+.unad-news-card{background:rgba(12,38,61,.95);border:1px solid rgba(34,211,238,.23);border-radius:14px;padding:1.3rem;height:100%}
+.unad-news-card h3{font-size:1rem;line-height:1.5;color:#effaff;overflow-wrap:anywhere}
+.unad-news-card .metadata{color:#b1d4e3;font-size:.82rem}
+.unad-news-card a{color:#67e8f9}
+.unad-news-card .news-label{font-size:.75rem;border:1px solid #22d3ee;color:#a5f3fc;border-radius:20px;padding:.25rem .6rem;display:inline-block;margin-bottom:.75rem}
+.unad-note{background:#12334a;border-left:3px solid #22d3ee;border-radius:8px;padding:1rem;color:#d8eef7}
 </style>
-
-<div class="monitor-unad">
-
-    <section class="monitor-hero">
-
-        <h1>
-            🛡️ Monitor de Ciberamenazas Universitarias
-        </h1>
-
-        <p>
-            Seguimiento especial a noticias de
-            ciberseguridad de la Universidad Nacional
-            Abierta y a Distancia (UNAD) y otras
-            universidades colombianas.
-        </p>
-
-        <span class="monitor-badge">
-            UNAD · Seguimiento prioritario
-        </span>
-
-        <span class="monitor-badge">
-            Noticias públicas · Actualización periódica
-        </span>
-
-    </section>
-
-    <section class="monitor-panel">
-
-        <h2>
-            Noticias y alertas universitarias
-        </h2>
-
-        <p>
-            Se consultan titulares públicos relacionados
-            con ciberataques, filtraciones, ransomware
-            y otras amenazas.
-        </p>
-
-        <button
-            class="monitor-btn"
-            type="button"
-            onclick="window.location.reload()">
-            🔄 Consultar noticias
-        </button>
-
-        <div class="monitor-note">
-            <strong>Importante:</strong>
-            estos titulares no significan que haya un
-            ciberataque confirmado. Verifica cada
-            publicación y su fecha antes de reportar
-            un incidente.
-        </div>
-
-        {% if errores is defined and errores %}
-
-        <div class="monitor-note">
-            No se pudieron consultar algunas fuentes:
-            {{ errores | join(", ") }}
-        </div>
-
-        {% endif %}
-
-        <div class="monitor-grid">
-
-            {% for noticia in noticias %}
-
-            <article class="monitor-news">
-
-                <span class="monitor-badge">
-                    {{ noticia.categoria }}
-                </span>
-
-                <h3>
-                    {{ noticia.titulo }}
-                </h3>
-
-                <p>
-                    Fuente: {{ noticia.fuente }}
-                </p>
-
-                <p>
-                    Publicado: {{ noticia.fecha }}
-                </p>
-
-                <a
-                    href="{{ noticia.enlace }}"
-                    target="_blank"
-                    rel="noopener noreferrer">
-                    Consultar publicación
-                </a>
-
-            </article>
-
-            {% else %}
-
-            <div class="monitor-news">
-                <h3>
-                    No hay noticias disponibles
-                </h3>
-
-                <p>
-                    No se recibieron resultados de las
-                    fuentes consultadas. Puedes intentar
-                    nuevamente más tarde.
-                </p>
-            </div>
-
-            {% endfor %}
-
-        </div>
-
-    </section>
-
-    <section class="monitor-panel">
-
-        <h2>Fuentes oficiales de referencia</h2>
-
-        <p>
-            <a
-                href="https://csirt.unad.edu.co/"
-                target="_blank"
-                rel="noopener noreferrer">
-                CSIRT Académico UNAD
-            </a>
-        </p>
-
-        <p>
-            <a
-                href="https://www.colcert.gov.co/"
-                target="_blank"
-                rel="noopener noreferrer">
-                COLCERT Colombia
-            </a>
-        </p>
-
-        <p>
-            <a href="{{ url_for('dashboard') }}">
-                Volver al tablero principal
-            </a>
-        </p>
-
-    </section>
-
-</div>
-
-<script>
-    // Renovación de la página cada 30 minutos
-    // mientras permanezca abierta y visible.
-    setInterval(function () {
-        if (!document.hidden) {
-            window.location.reload();
-        }
-    }, 1800000);
-</script>
-
 {% endblock %}
+{% block content %}
+<header class="unad-hero mb-4">
+  <p class="eyebrow">MONITOR DEL SECTOR EDUCATIVO</p>
+  <h1 class="h2 text-white fw-bold">🛡️ Ciberamenazas a universidades</h1>
+  <p class="text-info mb-3">Noticias públicas sobre la UNAD y universidades colombianas.</p>
+  <div class="d-flex flex-wrap gap-2"><span class="badge text-bg-info">UNAD prioritaria</span><span class="badge text-bg-secondary">RSS · 30 minutos de caché</span></div>
+</header>
+<section class="soc-panel mb-4">
+  <div class="soc-panel-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+    <div><h2 class="h5 mb-1">Últimas publicaciones relacionadas</h2><p class="small text-info m-0">Titulares públicos, no incidentes confirmados</p></div>
+    <button type="button" onclick="location.reload()" class="btn btn-outline-info">Consultar de nuevo</button>
+  </div>
+  <div class="p-3 p-md-4">
+    <div class="unad-note mb-4 small">Las noticias se consultan al abrir el monitor. Actualizar la página dentro de 30 minutos permitirá solicitar nuevos titulares. La fecha de publicación no necesariamente coincide con la fecha del supuesto ataque. Comprueba la fuente antes de considerar confirmado un incidente.</div>
+    {% if errores %}<div class="alert alert-warning" role="alert">No se pudieron consultar algunas fuentes: {{ errores|join(', ') }}. Se muestran los resultados disponibles.</div>{% endif %}
+    <div class="row g-3">
+    {% for noticia in noticias %}
+      <div class="col-lg-6"><article class="unad-news-card">
+        <span class="news-label">{{ 'UNAD · SEGUIMIENTO PRIORITARIO' if noticia.categoria == 'UNAD' else 'UNIVERSIDADES COLOMBIA' }}</span>
+        <h3>{{ noticia.titulo }}</h3>
+        <p class="metadata">{{ noticia.fuente }} · {{ noticia.fecha }} (Colombia)</p>
+        <a href="{{ noticia.enlace }}" target="_blank" rel="noopener noreferrer" class="fw-semibold">Leer publicación</a>
+      </article></div>
+    {% else %}
+      <div class="col-12"><p class="text-white-50">No se encontraron noticias. Revisa la conexión y prueba nuevamente más tarde.</p></div>
+    {% endfor %}
+    </div>
+  </div>
+</section>
+<section class="soc-panel p-4 mb-4">
+  <h2 class="h5 mb-3">Fuentes de referencia</h2>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-info" href="https://csirt.unad.edu.co/" target="_blank" rel="noopener noreferrer">CSIRT Académico UNAD</a>
+    <a class="btn btn-outline-info" href="https://www.colcert.gov.co/" target="_blank" rel="noopener noreferrer">COLCERT</a>
+    <a class="btn btn-outline-light" href="{{ url_for('dashboard') }}">Volver al tablero</a>
+  </div>
+</section>
+{% endblock %}
+{% block extra_js %}<script>window.setTimeout(() => { if (!document.hidden) location.reload(); }, 1800000);</script>{% endblock %}
