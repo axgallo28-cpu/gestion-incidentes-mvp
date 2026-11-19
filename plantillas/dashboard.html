@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Tablero y mapa de ciberamenazas{% endblock %}
+{% block content %}
+{% set total = totales.total %}
+{% set resueltos = totales.resueltos %}
+{% set porcentaje = (resueltos * 100 / total) | round(1) if total else 0 %}
+<header class="page-heading d-flex flex-wrap gap-3 justify-content-between align-items-center mb-4">
+  <div><div class="eyebrow">CENTRO DE OPERACIONES DE CIBERSEGURIDAD</div><h1 class="h2 fw-bold">Tablero de Gestión de Incidentes</h1><p>Monitoreo global y seguimiento de incidentes educativos.</p></div>
+  <a class="btn btn-cyber" href="{{ url_for('registrar') }}">+ Registrar incidente</a>
+</header>
+<section class="row g-3 mb-4" aria-label="Indicadores">
+  {% for titulo, valor, clase in [('Total incidentes',totales.total,'primary'),('Registrados',totales.registrados,'secondary'),('En atención',totales.en_atencion,'warning'),('Resueltos',totales.resueltos,'success')] %}
+  <div class="col-6 col-lg-3"><div class="soc-panel stat-card stat-{{ clase }}"><div class="stat-label">{{ titulo }}</div><div class="display-5 fw-bold">{{ valor }}</div></div></div>
+  {% endfor %}
+</section>
+<section class="soc-panel mb-4" aria-labelledby="titulo-mapa">
+  <div class="soc-panel-header d-flex flex-wrap justify-content-between align-items-center gap-2"><div><h2 id="titulo-mapa" class="h5 mb-1">🌐 Mapa mundial de ciberamenazas</h2><div class="small text-info">Visualización externa de Kaspersky · Widget oficial</div></div><a href="https://cybermap.kaspersky.com/es" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-info">Abrir mapa completo</a></div>
+  <iframe class="threat-map" src="https://cybermap.kaspersky.com/es/widget/dynamic/dark" title="Mapa de ciberamenazas Kaspersky" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+  <p class="small m-0 p-3 text-light-emphasis">Fuente: Kaspersky Cyberthreat Live Map. Sus detecciones externas no son incidentes de esta institución ni representan todos los ataques mundiales. El visor requiere conexión a internet.</p>
+</section>
+<section class="soc-panel mb-4"><div class="soc-panel-header"><h2 class="h5 m-0">Indicador de resolución</h2></div><div class="p-4"><div class="d-flex justify-content-between mb-2"><span>Incidentes resueltos</span><strong class="text-info">{{ porcentaje }} %</strong></div><div class="progress" role="progressbar" aria-label="Porcentaje resuelto" aria-valuenow="{{ porcentaje }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-success" style="width:{{ porcentaje }}%"></div></div><div class="small text-light-emphasis mt-2">{{ resueltos }} de {{ total }} incidentes resueltos</div></div></section>
+<section class="soc-panel mb-4"><div class="soc-panel-header"><h2 class="h5 m-0">Filtros de incidentes</h2></div><form class="row g-3 align-items-end p-4" method="GET" action="{{ url_for('dashboard') }}"><div class="col-md-4"><label class="form-label" for="estado">Estado</label><select class="form-select" id="estado" name="estado">{% for e in ['Todos','Registrado','En atención','Resuelto'] %}<option value="{{ e }}" {% if estado_filtro==e %}selected{% endif %}>{{ e }}</option>{% endfor %}</select></div><div class="col-md-4"><label class="form-label" for="prioridad">Prioridad</label><select class="form-select" id="prioridad" name="prioridad">{% for p in ['Todas','Baja','Media','Alta','Crítica'] %}<option value="{{ p }}" {% if prioridad_filtro==p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></div><div class="col-md-4 d-flex gap-2 flex-wrap"><button class="btn btn-cyber" type="submit">Aplicar filtros</button><a class="btn btn-outline-light" href="{{ url_for('dashboard') }}">Limpiar</a></div></form></section>
+<section class="soc-panel"><div class="soc-panel-header d-flex justify-content-between align-items-center"><h2 class="h5 m-0">Incidentes registrados</h2><span class="badge text-bg-info">{{ incidentes|length }} resultados</span></div><div class="table-responsive"><table class="table table-dark table-hover align-middle m-0"><thead><tr><th>Código</th><th>Título</th><th>Espacio</th><th>Prioridad</th><th>Estado</th><th>Responsable</th><th>Acción</th></tr></thead><tbody>
+{% for inc in incidentes %}<tr><td class="fw-bold">{{ inc.codigo or ('INC-%03d'|format(inc.id)) }}</td><td>{{ inc.titulo }}</td><td>{{ inc.sede_o_espacio }}</td><td><span class="badge {{ {'Baja':'text-bg-success','Media':'text-bg-warning','Alta':'text-bg-danger','Crítica':'text-bg-danger'}.get(inc.prioridad,'text-bg-secondary') }}">{{ inc.prioridad }}</span></td><td><span class="badge {{ {'Registrado':'text-bg-secondary','En atención':'text-bg-info','Resuelto':'text-bg-success'}.get(inc.estado,'text-bg-secondary') }}">{{ inc.estado }}</span></td><td>{{ inc.asignado_a }}</td><td><a class="btn btn-sm btn-outline-info" href="{{ url_for('detalle',incidente_id=inc.id) }}">Ver / Gestionar</a></td></tr>
+{% else %}<tr><td colspan="7" class="text-center py-5">No hay incidentes que coincidan con los filtros. <a class="text-info" href="{{ url_for('registrar') }}">Registrar uno</a></td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}
