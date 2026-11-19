@@ -1,109 +1,103 @@
-{% extends "base.html" %}
-{% block title %}Tablero de Incidentes{% endblock %}
 
-{% block content %}
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card border-0 shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Total Incidentes</div>
-        <div class="fs-3 fw-bold">{{ totales.total or 0 }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card border-0 shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Registrados</div>
-        <div class="fs-3 fw-bold text-primary">{{ totales.registrados or 0 }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card border-0 shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">En atención</div>
-        <div class="fs-3 fw-bold text-warning">{{ totales.en_atencion or 0 }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card border-0 shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Resueltos</div>
-        <div class="fs-3 fw-bold text-success">{{ totales.resueltos or 0 }}</div>
-      </div>
-    </div>
-  </div>
-</div>
+/* FONDO DE CIBERSEGURIDAD */
 
-<div class="card border-0 shadow-sm mb-4">
-  <div class="card-body">
-    <form method="GET" action="{{ url_for('dashboard') }}" class="row g-2 align-items-end">
-      <div class="col-md-4">
-        <label class="form-label small fw-semibold">Filtrar por estado</label>
-        <select name="estado" class="form-select">
-          {% for est in ["Todos", "Registrado", "En atención", "Resuelto"] %}
-            <option value="{{ est }}" {% if estado_filtro == est %}selected{% endif %}>{{ est }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label small fw-semibold">Filtrar por prioridad</label>
-        <select name="prioridad" class="form-select">
-          {% for prio in ["Todas", "Baja", "Media", "Alta", "Crítica"] %}
-            <option value="{{ prio }}" {% if prioridad_filtro == prio %}selected{% endif %}>{{ prio }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-4 d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Aplicar filtros</button>
-        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Limpiar</a>
-      </div>
-    </form>
-  </div>
-</div>
+body {
+    background-color: #061526;
+    background-image:
+        radial-gradient(
+            ellipse at 15% 20%,
+            rgba(0, 195, 255, 0.18),
+            transparent 45%
+        ),
+        radial-gradient(
+            ellipse at 85% 80%,
+            rgba(0, 115, 255, 0.16),
+            transparent 45%
+        ),
+        linear-gradient(
+            135deg,
+            #04101f 0%,
+            #0b2540 50%,
+            #061526 100%
+        );
 
-<div class="card border-0 shadow-sm">
-  <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-    <h5 class="mb-0">Incidentes Registrados</h5>
-    <a href="{{ url_for('registrar') }}" class="btn btn-sm btn-primary">Registrar Incidente</a>
-  </div>
-  <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead class="table-light">
-        <tr>
-          <th>Código</th>
-          <th>Título</th>
-          <th>Espacio</th>
-          <th>Prioridad</th>
-          <th>Estado</th>
-          <th>Asignado a</th>
-          <th>Acción</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for inc in incidentes %}
-        <tr>
-          <td class="fw-semibold">{{ inc.codigo or ("INC-%03d"|format(inc.id)) }}</td>
-          <td>{{ inc.titulo }}</td>
-          <td>{{ inc.sede_o_espacio }}</td>
-          <td><span class="badge text-bg-secondary">{{ inc.prioridad }}</span></td>
-          <td><span class="badge text-bg-info">{{ inc.estado }}</span></td>
-          <td>{{ inc.asignado_a }}</td>
-          <td>
-            <a href="{{ url_for('detalle', incidente_id=inc.id) }}" class="btn btn-sm btn-outline-primary">Ver / Gestionar</a>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="7" class="text-center text-muted py-4">
-            Aún no hay incidentes registrados. Crea el primero desde <strong>+ Nuevo Incidente</strong>.
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endblock %}
+    background-attachment: fixed;
+    background-size: cover;
+    min-height: 100vh;
+}
+
+/* RED DIGITAL DECORATIVA */
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+
+    background-image:
+        linear-gradient(
+            rgba(0, 210, 255, 0.065) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(0, 210, 255, 0.065) 1px,
+            transparent 1px
+        );
+
+    background-size: 45px 45px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* CONTENIDO POR ENCIMA DEL FONDO */
+
+.navbar,
+.main-content,
+.footer {
+    position: relative;
+    z-index: 1;
+}
+
+/* TITULOS SOBRE EL FONDO OSCURO */
+
+.dashboard-title,
+.detail-heading {
+    color: #ffffff;
+}
+
+.dashboard-subtitle {
+    color: #b5d2e6;
+}
+
+/* TARJETAS */
+
+.dashboard-card,
+.detail-card,
+.stat-card,
+.summary-card {
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid rgba(0, 210, 255, 0.15);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* EFECTO INTERACTIVO */
+
+.stat-card:hover {
+    border-color: #00b5ad;
+    box-shadow: 0 10px 30px rgba(0, 181, 173, 0.18);
+}
+
+/* BARRA DE NAVEGACIÓN */
+
+.navbar {
+    background: rgba(4, 16, 31, 0.96);
+    border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+}
+
+/* PIE DE PAGINA */
+
+.footer {
+    background: #07192b;
+    color: #cbd5e1;
+    border-top: 1px solid rgba(0, 210, 255, 0.15);
+}
