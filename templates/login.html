@@ -1,83 +1,776 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Incidentes · Acceso</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#061323">
+
+    <title>Gestión de Incidentes | Acceso</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #061323;
+            --panel: #10253b;
+            --cyan: #00d5ef;
+            --light-cyan: #67e8f9;
+            --text: #eaf6ff;
+            --muted: #a9bfd2;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #061323;
+            color: var(--text);
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+
+        /* FONDO GENERAL DE CIBERSEGURIDAD */
+
+        .cyber-background {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+
+            background:
+                radial-gradient(
+                    circle at 15% 30%,
+                    rgba(0,190,255,.20),
+                    transparent 40%
+                ),
+                radial-gradient(
+                    circle at 85% 75%,
+                    rgba(0,90,255,.18),
+                    transparent 40%
+                ),
+                linear-gradient(
+                    135deg,
+                    #030915,
+                    #0a2947,
+                    #041222
+                );
+        }
+
+        .cyber-background::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+
+            background-image:
+                linear-gradient(
+                    rgba(0,220,255,.055) 1px,
+                    transparent 1px
+                ),
+                linear-gradient(
+                    90deg,
+                    rgba(0,220,255,.055) 1px,
+                    transparent 1px
+                );
+
+            background-size: 45px 45px;
+        }
+
+        /* DISTRIBUCIÓN */
+
+        .login-layout {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        /* PANEL IZQUIERDO */
+
+        .visual-panel {
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+
+            background:
+                linear-gradient(
+                    to bottom,
+                    rgba(3,12,26,.12),
+                    rgba(3,12,26,.15) 55%,
+                    rgba(3,12,26,.88)
+                ),
+                url("{{ url_for('static', filename='images/cyber_escudo.png') }}");
+
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .visual-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        .visual-content h2 {
+            font-weight: 750;
+            font-size: 1.75rem;
+            text-shadow: 0 2px 15px #000;
+        }
+
+        .visual-content p {
+            color: #c5e7f4;
+            font-size: .95rem;
+            text-shadow: 0 2px 8px #000;
+        }
+
+        /* PANEL DERECHO */
+
+        .form-panel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2.5rem 1.5rem;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 460px;
+        }
+
+        .login-card {
+            padding: 2.25rem;
+            background: rgba(14,35,57,.95);
+            border: 1px solid rgba(0,213,239,.32);
+            border-radius: 22px;
+
+            box-shadow:
+                0 20px 55px rgba(0,0,0,.36),
+                0 0 30px rgba(0,213,239,.08);
+
+            backdrop-filter: blur(12px);
+        }
+
+        /* ICONO CENTRAL */
+
+        .security-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            margin: 0 auto 1.2rem;
+            width: 74px;
+            height: 74px;
+
+            background: rgba(0,213,239,.12);
+            border: 1px solid rgba(0,213,239,.4);
+            border-radius: 22px;
+
+            box-shadow: 0 0 30px rgba(0,213,239,.15);
+        }
+
+        .security-icon svg {
+            width: 42px;
+            height: 42px;
+            stroke: var(--light-cyan);
+        }
+
+        .system-title {
+            color: white;
+            font-weight: 750;
+            font-size: 1.65rem;
+            text-align: center;
+        }
+
+        .system-subtitle {
+            color: var(--light-cyan);
+            font-size: .76rem;
+            text-transform: uppercase;
+            letter-spacing: 1.4px;
+            text-align: center;
+        }
+
+        .welcome-title {
+            color: white;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .welcome-description {
+            color: var(--muted);
+            font-size: .89rem;
+        }
+
+        /* FORMULARIO */
+
+        .login-label {
+            color: #dcebf6;
+            font-weight: 600;
+            font-size: .85rem;
+            margin-bottom: .5rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .login-input {
+            background: #081b30;
+            border: 1px solid #34566e;
+            color: white;
+            border-radius: 11px;
+            padding: .85rem 2.8rem .85rem 1rem;
+        }
+
+        .login-input::placeholder {
+            color: #95abc1;
+        }
+
+        .login-input:focus {
+            background: #0b243c;
+            border-color: var(--cyan);
+            color: white;
+            box-shadow: 0 0 0 .2rem rgba(0,213,239,.15);
+        }
+
+        .show-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+
+            border: 0;
+            background: transparent;
+            color: #a9bfd2;
+            padding: .4rem;
+            cursor: pointer;
+        }
+
+        .show-password:hover {
+            color: #fff;
+        }
+
+        /* BOTÓN PRINCIPAL */
+
+        .btn-login {
+            width: 100%;
+            background: linear-gradient(
+                90deg,
+                #00c7e6,
+                #32e0f1
+            );
+
+            border: none;
+            color: #052638;
+            font-weight: 750;
+            padding: .9rem;
+            border-radius: 11px;
+
+            transition: transform .2s,
+                        box-shadow .2s;
+        }
+
+        .btn-login:hover {
+            background: #67e8f9;
+            color: #052638;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,213,239,.25);
+        }
+
+        .btn-login:disabled {
+            opacity: .7;
+            transform: none;
+        }
+
+        .forgot-link {
+            color: var(--light-cyan);
+            text-decoration: none;
+            font-size: .85rem;
+        }
+
+        .forgot-link:hover {
+            color: white;
+            text-decoration: underline;
+        }
+
+        /* RESTABLECIMIENTO */
+
+        .reset-panel {
+            background: rgba(3,15,29,.65);
+            border: 1px solid rgba(0,213,239,.22);
+            border-radius: 12px;
+            padding: 1.2rem;
+        }
+
+        .reset-panel .form-control {
+            background: #081b30;
+            border: 1px solid #34566e;
+            color: white;
+        }
+
+        .reset-panel .form-control:focus {
+            background: #0b243c;
+            border-color: var(--cyan);
+            color: white;
+        }
+
+        .reset-panel .form-control::placeholder {
+            color: #95abc1;
+        }
+
+        .footer-login {
+            color: #a8bfce;
+            font-size: .77rem;
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        /* ADAPTACIÓN PARA MÓVILES */
+
+        @media (max-width: 900px) {
+            .login-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .visual-panel {
+                display: none;
+            }
+
+            .form-panel {
+                min-height: 100vh;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 1.5rem;
+            }
+
+            .system-title {
+                font-size: 1.4rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .btn-login {
+                transition: none;
+            }
+        }
+    </style>
 </head>
-<body class="bg-light d-flex align-items-center justify-content-center min-vh-100">
 
-    <div class="card shadow-sm border-0 p-4" style="max-width: 420px; width: 100%; border-radius: 12px;">
-        <div class="text-center mb-3">
-            <h3 class="fw-bold text-primary mb-1">Gestión de Incidentes</h3>
-            <p class="text-muted small mb-0">Proyecto de Grado - TRL 5</p>
-        </div>
+<body>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} py-2 small" role="alert">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+    <div class="cyber-background" aria-hidden="true"></div>
 
-        <form method="POST" action="{{ url_for('login') }}">
-            <div class="mb-3">
-                <label for="username" class="form-label fw-semibold small">Usuario</label>
-                <input type="text" class="form-control" id="username" name="username" placeholder="Ej. admin, analista o soporte" required>
+    <main class="login-layout">
+
+        <!-- IMAGEN IZQUIERDA -->
+
+        <section class="visual-panel"
+                 aria-label="Imagen temática de ciberseguridad">
+
+            <div class="visual-content">
+                <h2>Protección de la Información</h2>
+
+                <p class="mb-0">
+                    Monitoreo · Detección · Respuesta · Seguimiento
+                </p>
             </div>
 
-            <div class="mb-3">
-                <label for="password" class="form-label fw-semibold small">Contraseña</label>
-                <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required>
+        </section>
+
+
+        <!-- FORMULARIO DERECHO -->
+
+        <section class="form-panel">
+
+            <div class="login-container">
+
+                <div class="login-card">
+
+                    <!-- LOGO -->
+
+                    <div class="security-icon">
+                        <svg viewBox="0 0 24 24"
+                             fill="none"
+                             stroke-width="1.7"
+                             stroke-linecap="round"
+                             stroke-linejoin="round"
+                             aria-hidden="true">
+
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <path d="m9 12 2 2 4-4"/>
+                        </svg>
+                    </div>
+
+                    <h1 class="system-title">
+                        Gestión de Incidentes
+                    </h1>
+
+                    <p class="system-subtitle mb-4">
+                        Ciberseguridad Educativa · TRL 5
+                    </p>
+
+                    <h2 class="welcome-title">
+                        Bienvenido al sistema
+                    </h2>
+
+                    <p class="welcome-description mb-4">
+                        Ingresa tus credenciales para continuar.
+                    </p>
+
+                    <!-- MENSAJES FLASK -->
+
+                    {% with messages = get_flashed_messages(
+                        with_categories=true
+                    ) %}
+
+                        {% for category, message in messages %}
+
+                            {% set tipo = {
+                                "error": "danger",
+                                "danger": "danger",
+                                "success": "success",
+                                "warning": "warning",
+                                "info": "info"
+                            }.get(category, "info") %}
+
+                            <div class="alert alert-{{ tipo }}"
+                                 role="alert">
+                                {{ message }}
+                            </div>
+
+                        {% endfor %}
+
+                    {% endwith %}
+
+
+                    <!-- INICIO DE SESIÓN -->
+
+                    <form
+                        id="loginForm"
+                        method="POST"
+                        action="{{ url_for('login') }}">
+
+                        {% if csrf_token is defined %}
+                            <input type="hidden"
+                                   name="csrf_token"
+                                   value="{{ csrf_token() }}">
+                        {% endif %}
+
+                        <div class="mb-3">
+
+                            <label for="username"
+                                   class="login-label">
+                                Usuario
+                            </label>
+
+                            <input
+                                type="text"
+                                id="username"
+                                name="username"
+                                class="form-control login-input"
+                                placeholder="Nombre de usuario"
+                                autocomplete="username"
+                                maxlength="100"
+                                required
+                                autofocus>
+
+                        </div>
+
+
+                        <div class="mb-4">
+
+                            <label for="password"
+                                   class="login-label">
+                                Contraseña
+                            </label>
+
+                            <div class="input-wrapper">
+
+                                <input
+                                    type="password"
+                                    id="password"
+                                    name="password"
+                                    class="form-control login-input"
+                                    placeholder="Ingresa tu contraseña"
+                                    autocomplete="current-password"
+                                    required>
+
+                                <button
+                                    type="button"
+                                    class="show-password"
+                                    id="togglePassword"
+                                    aria-label="Mostrar contraseña"
+                                    aria-pressed="false">
+
+                                    <svg width="21"
+                                         height="21"
+                                         viewBox="0 0 24 24"
+                                         fill="none"
+                                         stroke="currentColor"
+                                         stroke-width="1.8"
+                                         aria-hidden="true">
+
+                                        <path d="M2 12s3.5-7 10-7
+                                                 10 7 10 7-3.5 7-10 7
+                                                 -10-7-10-7z"/>
+                                        <circle cx="12"
+                                                cy="12"
+                                                r="3"/>
+                                    </svg>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                        <button
+                            type="submit"
+                            id="btnLogin"
+                            class="btn btn-login">
+
+                            Ingresar al sistema
+
+                        </button>
+
+                    </form>
+
+
+                    <!-- RECUPERACIÓN -->
+
+                    <div class="text-center mt-4">
+
+                        <a
+                            href="#panelRestablecer"
+                            class="forgot-link"
+                            data-bs-toggle="collapse"
+                            role="button"
+                            aria-expanded="false"
+                            aria-controls="panelRestablecer">
+
+                            ¿Olvidaste tu contraseña?
+
+                        </a>
+
+                    </div>
+
+
+                    <div class="collapse mt-3"
+                         id="panelRestablecer">
+
+                        <div class="reset-panel">
+
+                            <h3 class="h6 fw-bold text-white">
+                                Restablecer contraseña
+                            </h3>
+
+                            <p class="small"
+                               style="color:#a9bfd2">
+                                Solo para el entorno
+                                académico de pruebas.
+                            </p>
+
+                            <form
+                                id="resetForm"
+                                method="POST"
+                                action="{{ url_for('restablecer_clave') }}">
+
+                                {% if csrf_token is defined %}
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}">
+                                {% endif %}
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="reset_username"
+                                        class="login-label">
+                                        Usuario
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="reset_username"
+                                        name="reset_username"
+                                        class="form-control"
+                                        autocomplete="username"
+                                        maxlength="100"
+                                        required>
+
+                                </div>
+
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="nueva_clave"
+                                        class="login-label">
+                                        Nueva contraseña
+                                    </label>
+
+                                    <input
+                                        type="password"
+                                        id="nueva_clave"
+                                        name="nueva_clave"
+                                        class="form-control"
+                                        autocomplete="new-password"
+                                        minlength="12"
+                                        required>
+
+                                </div>
+
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="confirmar_clave"
+                                        class="login-label">
+                                        Confirmar contraseña
+                                    </label>
+
+                                    <input
+                                        type="password"
+                                        id="confirmar_clave"
+                                        name="confirmar_clave"
+                                        class="form-control"
+                                        autocomplete="new-password"
+                                        minlength="12"
+                                        required>
+
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-outline-info w-100">
+                                    Actualizar contraseña
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- PIE DE PÁGINA -->
+
+                <footer class="footer-login">
+
+                    <p class="mb-1">
+                        Acceso restringido · Entorno académico
+                    </p>
+
+                    <p class="mb-0">
+                        Proyecto de Grado · TRL 5
+                    </p>
+
+                </footer>
+
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 fw-semibold py-2">
-                Ingresar al Sistema
-            </button>
-        </form>
+        </section>
 
-        <div class="text-center mt-2">
-            <a class="small text-decoration-none" data-bs-toggle="collapse" href="#panelRestablecer" role="button" aria-expanded="false">
-                ¿Olvidaste o deseas restablecer tu clave?
-            </a>
-        </div>
+    </main>
 
-        <div class="collapse mt-3" id="panelRestablecer">
-            <div class="border rounded p-3 bg-light">
-                <p class="fw-semibold small mb-2">Restablecer contraseña (Entorno de pruebas)</p>
-                <form method="POST" action="{{ url_for('restablecer_clave') }}">
-                    <div class="mb-2">
-                        <input type="text" class="form-control form-control-sm" name="reset_username" placeholder="Usuario (admin, analista o soporte)" required>
-                    </div>
-                    <div class="mb-2">
-                        <input type="password" class="form-control form-control-sm" name="nueva_clave" placeholder="Nueva contraseña" required>
-                    </div>
-                    <div class="mb-2">
-                        <input type="password" class="form-control form-control-sm" name="confirmar_clave" placeholder="Confirmar nueva contraseña" required>
-                    </div>
-                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
-                        Actualizar contraseña
-                    </button>
-                </form>
-            </div>
-        </div>
 
-        <hr class="my-3">
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+    </script>
 
-        <div class="small text-muted">
-            <p class="fw-semibold mb-1">Credenciales de prueba</p>
-            <ul class="mb-0 ps-3">
-                <li><strong>Admin:</strong> admin / 1234 (Rol Administrador)</li>
-                <li><strong>Analista:</strong> analista / 1234 (Rol Administrador)</li>
-                <li><strong>Soporte:</strong> soporte / 1234 (Rol Usuario)</li>
-            </ul>
-        </div>
-    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+            const password =
+                document.getElementById("password");
+
+            const toggle =
+                document.getElementById("togglePassword");
+
+            const loginForm =
+                document.getElementById("loginForm");
+
+            const btnLogin =
+                document.getElementById("btnLogin");
+
+            // Mostrar y ocultar contraseña
+            toggle.addEventListener("click", () => {
+                const visible = password.type === "text";
+
+                password.type =
+                    visible ? "password" : "text";
+
+                toggle.setAttribute(
+                    "aria-label",
+                    visible
+                        ? "Mostrar contraseña"
+                        : "Ocultar contraseña"
+                );
+
+                toggle.setAttribute(
+                    "aria-pressed",
+                    String(!visible)
+                );
+            });
+
+            // Evitar doble envío
+            loginForm.addEventListener("submit", () => {
+                if (!loginForm.checkValidity()) {
+                    return;
+                }
+
+                btnLogin.disabled = true;
+                btnLogin.textContent = "Verificando acceso...";
+            });
+
+            // Confirmación de nueva contraseña
+            const resetForm =
+                document.getElementById("resetForm");
+
+            const nueva =
+                document.getElementById("nueva_clave");
+
+            const confirmar =
+                document.getElementById("confirmar_clave");
+
+            function validarClaves() {
+                confirmar.setCustomValidity(
+                    nueva.value === confirmar.value
+                        ? ""
+                        : "Las contraseñas no coinciden."
+                );
+            }
+
+            nueva.addEventListener("input", validarClaves);
+            confirmar.addEventListener("input", validarClaves);
+
+            resetForm.addEventListener("submit", (event) => {
+                validarClaves();
+
+                if (!resetForm.checkValidity()) {
+                    event.preventDefault();
+                    resetForm.reportValidity();
+                }
+            });
+
+        });
+    </script>
+
 </body>
 </html>
+
