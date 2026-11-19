@@ -197,8 +197,17 @@ def dashboard():
             consulta += ' AND prioridad=?'
             params.append(prioridad)
         incidentes = conn.execute(consulta + ' ORDER BY id DESC', params).fetchall()
-    return render_template('dashboard.html', incidentes=incidentes, totales=totales,
-                           estado_filtro=estado, prioridad_filtro=prioridad)
+    # Titulares publicos; no equivalen a ciberataques confirmados.
+    noticias, errores_noticias = noticias_universitarias()
+    noticias_unad = [n for n in noticias if n['categoria'] == 'UNAD']
+    noticias_otras = [n for n in noticias if n['categoria'] != 'UNAD']
+    return render_template(
+        'dashboard.html', incidentes=incidentes, totales=totales,
+        estado_filtro=estado, prioridad_filtro=prioridad,
+        noticias=noticias, noticias_unad=noticias_unad,
+        noticias_otras=noticias_otras, errores_noticias=errores_noticias,
+        noticias_actualizado=_CACHE_NOTICIAS.get('fecha_consulta', ''),
+    )
 
 
 @app.route('/registrar', methods=['GET', 'POST'])
@@ -298,7 +307,7 @@ CONSULTAS_NOTICIAS = {
 }
 
 _CADUCIDAD_NOTICIAS = 1800  # 30 minutos por proceso; no es una tarea en segundo plano.
-_CACHE_NOTICIAS = {"actualizado": 0.0, "noticias": [], "errores": []}
+_CACHE_NOTICIAS = {"actualizado": 0.0, "noticias": [], "errores": [], "fecha_consulta": ""}
 _CERROJO_NOTICIAS = threading.Lock()
 
 
@@ -369,6 +378,7 @@ def noticias_universitarias():
             _CACHE_NOTICIAS["noticias"] = noticias
         _CACHE_NOTICIAS["errores"] = fallos
         _CACHE_NOTICIAS["actualizado"] = momento
+        _CACHE_NOTICIAS["fecha_consulta"] = ahora()
         return _CACHE_NOTICIAS["noticias"], fallos
 
 
