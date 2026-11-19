@@ -24,4 +24,41 @@
 {% for inc in incidentes %}<tr><td class="fw-bold">{{ inc.codigo or ('INC-%03d'|format(inc.id)) }}</td><td>{{ inc.titulo }}</td><td>{{ inc.sede_o_espacio }}</td><td><span class="badge {{ {'Baja':'text-bg-success','Media':'text-bg-warning','Alta':'text-bg-danger','Crítica':'text-bg-danger'}.get(inc.prioridad,'text-bg-secondary') }}">{{ inc.prioridad }}</span></td><td><span class="badge {{ {'Registrado':'text-bg-secondary','En atención':'text-bg-info','Resuelto':'text-bg-success'}.get(inc.estado,'text-bg-secondary') }}">{{ inc.estado }}</span></td><td>{{ inc.asignado_a }}</td><td><a class="btn btn-sm btn-outline-info" href="{{ url_for('detalle',incidente_id=inc.id) }}">Ver / Gestionar</a></td></tr>
 {% else %}<tr><td colspan="7" class="text-center py-5">No hay incidentes que coincidan con los filtros. <a class="text-info" href="{{ url_for('registrar') }}">Registrar uno</a></td></tr>{% endfor %}
 </tbody></table></div></section>
+
+<!-- MONITOR DE CIBERAMENAZAS UNIVERSITARIAS -->
+
+<section style="
+    background: linear-gradient(120deg, #071c32, #113c58);
+    border: 1px solid #22d3ee;
+    border-radius: 16px;
+    padding: 24px;
+    margin: 24px 0;
+    color: #ffffff;
+">
+
+    <h2 style="color:#67e8f9;">
+        🛡️ Monitor de Ciberamenazas Universitarias
+    </h2>
+
+    <p>
+        Consulta noticias y alertas relacionadas
+        con ciberataques a universidades colombianas,
+        con seguimiento prioritario a la UNAD.
+    </p>
+
+    <a href="{{ url_for('amenazas_universitarias') }}"
+       style="
+           display:inline-block;
+           background:#0891b2;
+           padding:12px 20px;
+           border-radius:8px;
+           color:#ffffff;
+           text-decoration:none;
+           font-weight:bold;
+       ">
+        Consultar amenazas universitarias
+    </a>
+
+</section>
+
 {% endblock %}
