@@ -278,8 +278,109 @@ def error_404(error):
     return 'Página o incidente no encontrado.', 404
 
 
+
+
+# ==========================================
+# MONITOR DE NOTICIAS DE CIBERSEGURIDAD
+# Prioridad: UNAD / sector universitario colombiano
+# ==========================================
+import time
+import threading
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+from datetime import timezone
+from email.utils import parsedate_to_datetime
+
+CONSULTAS_NOTICIAS = {
+    "UNAD": '"UNAD" (ciberataque OR hackeo OR filtración OR ransomware OR ciberseguridad) when:30d',
+    "Universidades de Colombia": '(universidad OR universidades) Colombia (ciberataque OR ransomware OR filtración OR phishing) when:30d',
+}
+
+_CADUCIDAD_NOTICIAS = 1800  # 30 minutos por proceso; no es una tarea en segundo plano.
+_CACHE_NOTICIAS = {"actualizado": 0.0, "noticias": [], "errores": []}
+_CERROJO_NOTICIAS = threading.Lock()
+
+
+def consultar_rss(categoria, consulta):
+    """Lee titulares del RSS público de Google News. No implica confirmar un ataque."""
+    parametros = urllib.parse.urlencode({
+        "q": consulta, "hl": "es-419", "gl": "CO", "ceid": "CO:es-419"
+    })
+    url = "https://news.google.com/rss/search?" + parametros
+    peticion = urllib.request.Request(
+        url, headers={"User-Agent": "Mozilla/5.0 (AcademicThreatMonitor/1.0)"}
+    )
+    with urllib.request.urlopen(peticion, timeout=8) as respuesta:
+        xml = respuesta.read(1024 * 1024)
+    raiz = ET.fromstring(xml)
+    noticias = []
+    for item in raiz.findall("./channel/item")[:15]:
+        titulo = (item.findtext("title") or "").strip()
+        enlace = (item.findtext("link") or "").strip()
+        publicada = (item.findtext("pubDate") or "").strip()
+        origen = item.find("source")
+        fuente = (origen.text or "").strip() if origen is not None else "Fuente sin identificar"
+        if not titulo or not enlace.startswith("https://news.google.com/"):
+            continue
+        orden = 0.0
+        fecha = "Fecha no disponible"
+        try:
+            parsed = parsedate_to_datetime(publicada)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            orden = parsed.timestamp()
+            fecha = parsed.astimezone(TZ).strftime("%d/%m/%Y %H:%M")
+        except (ValueError, TypeError, OverflowError):
+            pass
+        noticias.append({
+            "categoria": categoria,
+            "titulo": titulo[:320],
+            "enlace": enlace,
+            "fuente": fuente[:100],
+            "fecha": fecha,
+            "orden": orden,
+        })
+    return noticias
+
+
+def noticias_universitarias():
+    """Actualiza bajo demanda cada 30 min y conserva cache si falla una fuente."""
+    with _CERROJO_NOTICIAS:
+        momento = time.monotonic()
+        if momento - _CACHE_NOTICIAS["actualizado"] < _CADUCIDAD_NOTICIAS:
+            return _CACHE_NOTICIAS["noticias"], _CACHE_NOTICIAS["errores"]
+        unicas = {}
+        fallos = []
+        for categoria, consulta in CONSULTAS_NOTICIAS.items():
+            try:
+                for noticia in consultar_rss(categoria, consulta):
+                    clave = noticia["titulo"].casefold()
+                    if clave not in unicas:
+                        unicas[clave] = noticia
+            except (OSError, ValueError, ET.ParseError) as ex:
+                app.logger.warning("Error consultando titulares (%s): %s", categoria, ex)
+                fallos.append(categoria)
+        noticias = sorted(
+            unicas.values(),
+            key=lambda n: (n["categoria"] != "UNAD", -n["orden"])
+        )[:20]
+        if noticias:
+            _CACHE_NOTICIAS["noticias"] = noticias
+        _CACHE_NOTICIAS["errores"] = fallos
+        _CACHE_NOTICIAS["actualizado"] = momento
+        return _CACHE_NOTICIAS["noticias"], fallos
+
+
+@app.route('/amenazas-universitarias')
+@login_required
+def amenazas_universitarias():
+    noticias, errores = noticias_universitarias()
+    return render_template('amenazas_universitarias.html', noticias=noticias, errores=errores)
+
 # Se inicializa tanto con python app.py como con un servidor WSGI.
 init_db()
+
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=False)
