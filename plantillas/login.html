@@ -25,7 +25,18 @@
         <button type="submit" class="btn btn-cyber w-100" id="loginButton">Ingresar al sistema</button>
       </form>
       <div class="text-center mt-4"><button class="btn btn-link text-info text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#recuperar" aria-expanded="false" aria-controls="recuperar">¿Olvidaste tu contraseña?</button></div>
-      <div class="collapse mt-3" id="recuperar"><div class="border border-info-subtle rounded p-3"><p class="small">Por seguridad, el restablecimiento requiere validación de identidad por un administrador autorizado.</p><form action="{{ url_for('restablecer_clave') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-outline-info w-100" type="submit">Consultar procedimiento</button></form></div></div>
+      <div class="collapse mt-3" id="recuperar">
+        <div class="border border-info-subtle rounded p-3">
+          <h3 class="h6 text-info">Solicitar recuperación de acceso</h3>
+          <p class="small text-light-emphasis">Solo para evaluador1 y evaluador2. Después de enviar la solicitud, contacta al administrador para verificar tu identidad. Nadie puede cambiar tu contraseña solo por conocer tu usuario.</p>
+          <form action="{{ url_for('restablecer_clave') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="form-label" for="reset_username">Nombre de usuario</label>
+            <input id="reset_username" name="reset_username" class="form-control mb-3" maxlength="100" autocomplete="username" required>
+            <button class="btn btn-outline-info w-100" type="submit">Enviar solicitud al administrador</button>
+          </form>
+        </div>
+      </div>
       <p class="text-center small text-light-emphasis mt-4 mb-0">Acceso restringido · Entorno académico</p>
     </div>
   </section>
