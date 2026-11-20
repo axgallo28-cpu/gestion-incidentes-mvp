@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Recuperaciones | Administración{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-xl-9">
+  <section class="soc-panel"><div class="soc-panel-header"><h1 class="h4 mb-1">🛡️ Recuperaciones pendientes</h1><p class="mb-0 small">Solo administradores autorizados · Verifica personalmente la identidad antes de aprobar.</p></div>
+  <div class="p-4">
+  {% if temporal %}
+    <div class="alert alert-warning" role="status">
+      <strong>Contraseña temporal para {{ usuario_modificado }} (se muestra una sola vez):</strong>
+      <code class="d-block fs-6 text-dark my-2" style="overflow-wrap:anywhere">{{ temporal }}</code>
+      Entrégala por un canal seguro. La persona deberá cambiarla al iniciar sesión. No tomes capturas ni la guardes en GitHub.
+    </div>
+  {% endif %}
+  {% if pendientes %}
+  {% for solicitud in pendientes %}
+  <div class="border border-info-subtle rounded-3 p-3 mb-3">
+    <p class="mb-2"><strong>{{ solicitud.username }}</strong> · Solicitada: {{ solicitud.fecha_solicitud }} · ID {{ solicitud.id }}</p>
+    <form method="POST" action="{{ url_for('administrar_recuperaciones') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="solicitud_id" value="{{ solicitud.id }}">
+      <label for="admin_pw_{{ solicitud.id }}" class="form-label">Confirma tu contraseña de administrador</label>
+      <input type="password" class="form-control mb-2" id="admin_pw_{{ solicitud.id }}" name="password_admin" autocomplete="current-password" required>
+      <button class="btn btn-cyber" type="submit">Autorizar y generar contraseña temporal</button>
+    </form>
+  </div>
+  {% endfor %}
+  {% else %}<p class="text-light-emphasis mb-0">No hay solicitudes pendientes.</p>{% endif %}
+  </div></section>
+</div></div>
+{% endblock %}
