@@ -97,6 +97,22 @@ def init_db():
             conn.execute('INSERT INTO usuarios(username, nombre, rol, password_hash) VALUES (?, ?, ?, ?)',
                          ('admin', 'Administrador', 'Rol Administrador', generate_password_hash(clave_admin)))
 
+        # Dos cuentas independientes para evaluación: consulta y registro.
+        # Se crean únicamente si existe su variable de entorno y aún no existen.
+        for numero in (1, 2):
+            nombre_usuario = f'evaluador{numero}'
+            password = os.getenv(f'EVALUADOR{numero}_PASSWORD', '')
+            if not password:
+                continue
+            if len(password) < 12:
+                raise RuntimeError(f'EVALUADOR{numero}_PASSWORD debe tener al menos 12 caracteres.')
+            registrado = conn.execute('SELECT id FROM usuarios WHERE username=?', (nombre_usuario,)).fetchone()
+            if not registrado:
+                conn.execute(
+                    'INSERT INTO usuarios(username, nombre, rol, password_hash) VALUES (?, ?, ?, ?)',
+                    (nombre_usuario, f'Evaluador {numero}', 'Registrador', generate_password_hash(password))
+                )
+
 
 def login_required(func):
     @wraps(func)
@@ -106,6 +122,22 @@ def login_required(func):
             return redirect(url_for('login'))
         return func(*args, **kwargs)
     return wrapped
+
+
+def es_administrador():
+    """Obtiene el rol efectivo desde SQLite, no desde datos enviados por el navegador."""
+    usuario_id = session.get('user_id')
+    if not usuario_id:
+        return False
+    with db() as conn:
+        usuario_actual = conn.execute('SELECT username, rol FROM usuarios WHERE id=?', (usuario_id,)).fetchone()
+    return bool(usuario_actual and usuario_actual['username'] == 'admin'
+                and usuario_actual['rol'] == 'Rol Administrador')
+
+
+def requiere_administrador_para_modificar():
+    if not es_administrador():
+        abort(403, 'Solo el administrador puede modificar o cerrar incidentes.')
 
 
 def csrf_token():
@@ -247,6 +279,7 @@ def detalle(incidente_id):
         if not incidente:
             abort(404)
         if request.method == 'POST':
+            requiere_administrador_para_modificar()
             estado = request.form.get('estado', '')
             prioridad = request.form.get('prioridad', '')
             asignado = request.form.get('asignado_a', '').strip() or 'Sin asignar'
@@ -269,7 +302,7 @@ def detalle(incidente_id):
     if request.method == 'POST':
         flash('Seguimiento actualizado correctamente.', 'success')
         return redirect(url_for('detalle', incidente_id=incidente_id))
-    return render_template('detalle.html', incidente=incidente, historial=historial)
+    return render_template('detalle.html', incidente=incidente, historial=historial, puede_editar=es_administrador())
 
 
 @app.errorhandler(400)
