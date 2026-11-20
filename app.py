@@ -1,4 +1,7 @@
 import hmac
+import json
+import urllib.error
+import urllib.request
 import os
 import secrets
 import sqlite3
@@ -30,6 +33,48 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
     MAX_CONTENT_LENGTH=1024 * 1024,
 )
+
+
+def enviar_alerta_admin(asunto, contenido):
+    """Envía correo transaccional al administrador usando Resend por HTTPS.
+
+    Los fallos de correo NO interrumpen el registro de incidentes ni las
+    solicitudes de recuperación. Nunca envía contraseñas ni claves API.
+    """
+    api_key = os.getenv('RESEND_API_KEY', '').strip()
+    destinatario = os.getenv('ADMIN_EMAIL', '').strip()
+    remitente = os.getenv('MAIL_FROM', 'onboarding@resend.dev').strip()
+    if not api_key or not destinatario or not remitente:
+        app.logger.warning('Notificación de correo omitida: configuración incompleta.')
+        return False
+    if '\r' in destinatario or '\n' in destinatario:
+        app.logger.warning('ADMIN_EMAIL no es válido.')
+        return False
+
+    cuerpo = json.dumps({
+        'from': remitente,
+        'to': [destinatario],
+        'subject': asunto,
+        'text': contenido,
+    }, ensure_ascii=False).encode('utf-8')
+    solicitud = urllib.request.Request(
+        'https://api.resend.com/emails',
+        data=cuerpo,
+        headers={
+            'Authorization': 'Bearer ' + api_key,
+            'Content-Type': 'application/json',
+            'User-Agent': 'gestion-incidentes-educativos/1.0',
+        },
+        method='POST',
+    )
+    try:
+        with urllib.request.urlopen(solicitud, timeout=8) as respuesta:
+            return 200 <= respuesta.status < 300
+    except urllib.error.HTTPError as error:
+        app.logger.warning('Resend no aceptó el envío (HTTP %s).', error.code)
+    except (urllib.error.URLError, TimeoutError, OSError) as error:
+        app.logger.warning('No se pudo entregar aviso a Resend (%s).', type(error).__name__)
+    return False
 
 
 def ahora():
@@ -222,6 +267,7 @@ def login():
 def restablecer_clave():
     """Solo solicita recuperación; nunca cambia contraseñas anónimamente."""
     username = request.form.get('reset_username', '').strip().lower()[:100]
+    solicitud_nueva = False
     if username in ('evaluador1', 'evaluador2'):
         with db() as conn:
             user = conn.execute('SELECT id FROM usuarios WHERE username=?', (username,)).fetchone()
@@ -235,6 +281,16 @@ def restablecer_clave():
                         'INSERT INTO solicitudes_clave(usuario_id, fecha_solicitud) VALUES (?, ?)',
                         (user['id'], ahora())
                     )
+                    solicitud_nueva = True
+    if solicitud_nueva:
+        enviar_alerta_admin(
+            'Solicitud de recuperación de acceso - Gestión de Incidentes',
+            f'El usuario {username} solicitó recuperar su acceso.\n'
+            f'Fecha: {ahora()} (Colombia).\n'
+            'Ingresa al sistema y verifica su identidad antes de restablecer.\n'
+            'Panel: ' + url_for('administrar_recuperaciones', _external=True) + '\n'
+            'No envíes contraseñas por correo.',
+        )
     # Mismo mensaje para usuarios inexistentes, sin revelar su existencia.
     flash('Si la cuenta está habilitada, la solicitud quedó registrada. Contacta al administrador por un canal conocido para verificar tu identidad.', 'info')
     return redirect(url_for('login'))
@@ -379,6 +435,16 @@ def registrar():
             conn.execute('UPDATE incidentes SET codigo=? WHERE id=?', (codigo, cur.lastrowid))
             conn.execute('''INSERT INTO auditoria(incidente_id, usuario_id, accion, detalle, fecha)
                 VALUES (?, ?, ?, ?, ?)''', (cur.lastrowid, session['user_id'], 'CREACIÓN', 'Registro inicial', ahora()))
+        # El incidente ya fue confirmado en SQLite antes del intento de envío.
+        enviar_alerta_admin(
+            ('[PRIORIDAD CRÍTICA] ' if prioridad == 'Crítica' else '')
+            + f'Nuevo incidente registrado: {codigo}',
+            f'Código: {codigo}\nTítulo: {titulo}\n'
+            f'Prioridad: {prioridad}\nRegistrado por: {session["usuario"]}\n'
+            f'Fecha: {ahora()} (Colombia).\n'
+            'Ingresa al tablero para revisar los detalles: '
+            + url_for('dashboard', _external=True),
+        )
         flash(f'{codigo} registrado correctamente.', 'success')
         return redirect(url_for('dashboard'))
     return render_template('registrar.html', categorias=CATEGORIAS)
