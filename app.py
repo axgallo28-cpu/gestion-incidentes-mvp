@@ -60,7 +60,9 @@ def init_db():
                 username TEXT UNIQUE NOT NULL,
                 nombre TEXT NOT NULL,
                 rol TEXT NOT NULL,
-                password_hash TEXT NOT NULL
+                password_hash TEXT NOT NULL,
+                cambiar_clave INTEGER NOT NULL DEFAULT 0,
+                version_sesion INTEGER NOT NULL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS incidentes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,9 +88,24 @@ def init_db():
                 FOREIGN KEY(incidente_id) REFERENCES incidentes(id),
                 FOREIGN KEY(usuario_id) REFERENCES usuarios(id)
             );
+            CREATE TABLE IF NOT EXISTS solicitudes_clave (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id INTEGER NOT NULL,
+                fecha_solicitud TEXT NOT NULL,
+                estado TEXT NOT NULL DEFAULT 'Pendiente',
+                fecha_resolucion TEXT,
+                FOREIGN KEY(usuario_id) REFERENCES usuarios(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_solicitudes_usuario ON solicitudes_clave(usuario_id, estado);
             CREATE INDEX IF NOT EXISTS idx_incidentes_estado ON incidentes(estado, prioridad);
             CREATE INDEX IF NOT EXISTS idx_auditoria_incidente ON auditoria(incidente_id, id);
         ''')
+        # Migración compatible con bases de datos ya existentes.
+        columnas = {fila['name'] for fila in conn.execute('PRAGMA table_info(usuarios)')}
+        if 'cambiar_clave' not in columnas:
+            conn.execute('ALTER TABLE usuarios ADD COLUMN cambiar_clave INTEGER NOT NULL DEFAULT 0')
+        if 'version_sesion' not in columnas:
+            conn.execute('ALTER TABLE usuarios ADD COLUMN version_sesion INTEGER NOT NULL DEFAULT 0')
         existe = conn.execute("SELECT id FROM usuarios WHERE username='admin'").fetchone()
         clave_admin = os.getenv('ADMIN_PASSWORD', '')
         if not existe:
@@ -117,9 +134,21 @@ def init_db():
 def login_required(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
-        if 'user_id' not in session:
+        usuario_id = session.get('user_id')
+        if not usuario_id:
             flash('Inicia sesión para continuar.', 'warning')
             return redirect(url_for('login'))
+        with db() as conn:
+            usuario_actual = conn.execute(
+                'SELECT id, cambiar_clave, version_sesion FROM usuarios WHERE id=?',
+                (usuario_id,)
+            ).fetchone()
+        if not usuario_actual or session.get('version_sesion') != usuario_actual['version_sesion']:
+            session.clear()
+            flash('Tu sesión ya no es válida. Inicia sesión nuevamente.', 'warning')
+            return redirect(url_for('login'))
+        if usuario_actual['cambiar_clave'] and request.endpoint not in ('cambiar_clave', 'logout'):
+            return redirect(url_for('cambiar_clave'))
         return func(*args, **kwargs)
     return wrapped
 
@@ -180,7 +209,9 @@ def login():
         if user and check_password_hash(user['password_hash'], password):
             session.clear()
             session.permanent = True
-            session.update(user_id=user['id'], username=user['username'], usuario=user['nombre'], rol=user['rol'])
+            session.update(user_id=user['id'], username=user['username'], usuario=user['nombre'], rol=user['rol'], version_sesion=user['version_sesion'])
+            if user['cambiar_clave']:
+                return redirect(url_for('cambiar_clave'))
             flash('Sesión iniciada correctamente.', 'success')
             return redirect(url_for('dashboard'))
         flash('Usuario o contraseña incorrectos.', 'danger')
@@ -189,9 +220,91 @@ def login():
 
 @app.route('/restablecer-clave', methods=['POST'])
 def restablecer_clave():
-    # No permitir restablecimientos anónimos sin verificación de identidad.
-    flash('El restablecimiento requiere verificación por un administrador autorizado.', 'warning')
+    """Solo solicita recuperación; nunca cambia contraseñas anónimamente."""
+    username = request.form.get('reset_username', '').strip().lower()[:100]
+    if username in ('evaluador1', 'evaluador2'):
+        with db() as conn:
+            user = conn.execute('SELECT id FROM usuarios WHERE username=?', (username,)).fetchone()
+            if user:
+                abierta = conn.execute(
+                    "SELECT id, fecha_solicitud FROM solicitudes_clave WHERE usuario_id=? AND estado='Pendiente' ORDER BY id DESC LIMIT 1",
+                    (user['id'],)
+                ).fetchone()
+                if not abierta:
+                    conn.execute(
+                        'INSERT INTO solicitudes_clave(usuario_id, fecha_solicitud) VALUES (?, ?)',
+                        (user['id'], ahora())
+                    )
+    # Mismo mensaje para usuarios inexistentes, sin revelar su existencia.
+    flash('Si la cuenta está habilitada, la solicitud quedó registrada. Contacta al administrador por un canal conocido para verificar tu identidad.', 'info')
     return redirect(url_for('login'))
+
+
+@app.route('/administrar/recuperaciones', methods=['GET', 'POST'])
+@login_required
+def administrar_recuperaciones():
+    if not es_administrador():
+        abort(403)
+    temporal = None
+    usuario_modificado = None
+    if request.method == 'POST':
+        solicitud_id = request.form.get('solicitud_id', type=int)
+        clave_admin_actual = request.form.get('password_admin', '')
+        if not solicitud_id or not clave_admin_actual:
+            flash('Verifica los datos antes de continuar.', 'danger')
+        else:
+            with db() as conn:
+                admin = conn.execute('SELECT password_hash FROM usuarios WHERE id=?', (session['user_id'],)).fetchone()
+                if not admin or not check_password_hash(admin['password_hash'], clave_admin_actual):
+                    flash('La contraseña del administrador no es correcta.', 'danger')
+                else:
+                    solicitud = conn.execute("""
+                        SELECT s.id, u.id AS usuario_id, u.username
+                        FROM solicitudes_clave s JOIN usuarios u ON u.id=s.usuario_id
+                        WHERE s.id=? AND s.estado='Pendiente'
+                    """, (solicitud_id,)).fetchone()
+                    if not solicitud or solicitud['username'] not in ('evaluador1', 'evaluador2'):
+                        flash('La solicitud no está disponible.', 'warning')
+                    else:
+                        # Contraseña temporal aleatoria: mostrada una sola vez.
+                        temporal = secrets.token_urlsafe(20)
+                        usuario_modificado = solicitud['username']
+                        conn.execute("""UPDATE usuarios
+                            SET password_hash=?, cambiar_clave=1, version_sesion=version_sesion+1
+                            WHERE id=?""", (generate_password_hash(temporal), solicitud['usuario_id']))
+                        conn.execute("""UPDATE solicitudes_clave SET estado='Atendida', fecha_resolucion=?
+                            WHERE id=?""", (ahora(), solicitud['id']))
+    with db() as conn:
+        pendientes = conn.execute("""SELECT s.id, s.fecha_solicitud, u.username
+            FROM solicitudes_clave s JOIN usuarios u ON u.id=s.usuario_id
+            WHERE s.estado='Pendiente' ORDER BY s.id DESC LIMIT 50""").fetchall()
+    return render_template('administrar_recuperaciones.html', pendientes=pendientes,
+                           temporal=temporal, usuario_modificado=usuario_modificado)
+
+
+@app.route('/cambiar-clave', methods=['GET', 'POST'])
+@login_required
+def cambiar_clave():
+    if request.method == 'POST':
+        actual = request.form.get('clave_actual', '')
+        nueva = request.form.get('nueva_clave', '')
+        confirmar = request.form.get('confirmar_clave', '')
+        if len(nueva) < 12 or nueva != confirmar or nueva == actual:
+            flash('La nueva contraseña debe tener al menos 12 caracteres, coincidir y ser diferente de la anterior.', 'danger')
+        else:
+            with db() as conn:
+                usuario_actual = conn.execute('SELECT password_hash FROM usuarios WHERE id=?', (session['user_id'],)).fetchone()
+                if not usuario_actual or not check_password_hash(usuario_actual['password_hash'], actual):
+                    flash('La contraseña actual o temporal no es correcta.', 'danger')
+                else:
+                    conn.execute("""UPDATE usuarios SET password_hash=?, cambiar_clave=0,
+                                   version_sesion=version_sesion+1 WHERE id=?""",
+                                 (generate_password_hash(nueva), session['user_id']))
+                    version = conn.execute('SELECT version_sesion FROM usuarios WHERE id=?', (session['user_id'],)).fetchone()['version_sesion']
+                    session['version_sesion'] = version
+                    flash('Contraseña actualizada correctamente.', 'success')
+                    return redirect(url_for('dashboard'))
+    return render_template('cambiar_clave.html')
 
 
 @app.route('/logout', methods=['POST'])
