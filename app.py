@@ -4,6 +4,7 @@ import urllib.error
 import urllib.request
 import os
 import secrets
+import re
 import psycopg
 from psycopg.rows import dict_row
 from contextlib import contextmanager
@@ -74,7 +75,29 @@ def enviar_alerta_admin(asunto, contenido):
         with urllib.request.urlopen(solicitud, timeout=8) as respuesta:
             return 200 <= respuesta.status < 300
     except urllib.error.HTTPError as error:
-        app.logger.warning('Resend no aceptó el envío (HTTP %s).', error.code)
+        # Resend envía habitualmente un JSON con 'name' y 'message'.
+        # Mostramos únicamente el diagnóstico, nunca el cuerpo del correo,
+        # la clave API, los encabezados ni direcciones de destinatarios.
+        tipo = 'no_disponible'
+        detalle = 'sin_detalle'
+        try:
+            respuesta_error = json.loads(error.read(4096).decode('utf-8', errors='replace'))
+            if isinstance(respuesta_error, dict):
+                tipo = str(respuesta_error.get('name') or 'no_disponible')
+                detalle = str(respuesta_error.get('message') or 'sin_detalle')
+        except (ValueError, UnicodeError, OSError):
+            pass
+        # Redacción preventiva para evitar que los registros expongan secretos.
+        def ocultar_datos(texto):
+            texto = texto.replace(api_key, '[clave oculta]')
+            texto = texto.replace(destinatario, '[correo oculto]')
+            texto = texto.replace(remitente, '[remitente oculto]')
+            texto = re.sub(r'(?i)\b(?:re|npg)_[a-z0-9_\-]+', '[credencial oculta]', texto)
+            texto = re.sub(r'(?i)[\w.+-]+@[\w.-]+\.[a-z]{2,}', '[correo oculto]', texto)
+            texto = re.sub(r'(?i)(?:postgres(?:ql)?|https?)://\S+', '[url oculta]', texto)
+            return texto.replace('\n', ' ').replace('\r', ' ')[:250]
+        app.logger.warning('Resend rechazó el envío: HTTP %s; tipo=%s; motivo=%s',
+                           error.code, ocultar_datos(tipo), ocultar_datos(detalle))
     except (urllib.error.URLError, TimeoutError, OSError) as error:
         app.logger.warning('No se pudo entregar aviso a Resend (%s).', type(error).__name__)
     return False
